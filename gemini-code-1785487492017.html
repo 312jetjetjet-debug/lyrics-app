@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>洋楽歌詞・対訳プロンプター (スマホ版)</title>
+  <style>
+    :root {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --text-color: #ffffff;
+      --accent-color: #1db954;
+      --dim-text: #888888;
+      --border-color: #333333;
+    }
+
+    * {
+      box-sizing: border-box;
+      touch-action: manipulation; /* タップの反応速度向上 */
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px; /* スマホ用に最大幅を調整 */
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      background: var(--card-bg);
+      padding: 4px;
+      border-radius: 10px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px 8px;
+      background: transparent;
+      border: none;
+      color: #888;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-color);
+      color: #fff;
+    }
+
+    .panel {
+      background-color: var(--card-bg);
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+      font-size: 0.85rem;
+      color: #ccc;
+    }
+
+    input, textarea, button {
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: #2a2a2a;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+    }
+
+    textarea {
+      height: 140px;
+      resize: vertical;
+      font-family: monospace;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    button {
+      padding: 12px;
+      background-color: var(--accent-color);
+      border: none;
+      font-weight: bold;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button:active { opacity: 0.7; }
+    button.secondary { background-color: #333; color: #ccc; }
+
+    .mode-btn.active-mode {
+      background-color: var(--accent-color) !important;
+      color: #fff !important;
+      border: 1px solid #72d893;
+    }
+
+    .timer-display {
+      text-align: center;
+      font-size: 2.5rem;
+      font-family: monospace;
+      margin: 2px 0;
+      color: var(--accent-color);
+      font-weight: bold;
+    }
+
+    /* 歌詞スクリーン */
+    .teleprompter-container {
+      height: 240px; /* スマホでより見やすく確保 */
+      overflow: hidden;
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .center-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: rgba(29, 185, 84, 0.5);
+      transform: translateY(-50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .lyrics-wrapper {
+      position: absolute;
+      width: 100%;
+      top: 50%;
+      transition: transform 0.2s ease-out;
+      text-align: center;
+    }
+
+    .lyric-block {
+      padding: 14px 10px;
+      color: var(--dim-text);
+      transition: color 0.2s, font-size 0.2s, opacity 0.2s;
+      opacity: 0.35;
+    }
+
+    .lyric-block.active {
+      color: #ffffff;
+      opacity: 1;
+    }
+
+    .lyric-block .orig {
+      font-size: 1.1rem;
+      font-weight: bold;
+      line-height: 1.3;
+    }
+
+    .lyric-block .trans {
+      font-size: 0.95rem;
+      color: #72d893;
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+
+    .lyric-block.active .trans {
+      color: #a3f7be;
+    }
+
+    /* タイムライン一覧 */
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      margin-top: 8px;
+      padding-right: 2px;
+    }
+
+    .timeline-item {
+      display: flex;
+      flex-direction: column;
+      background: #252525;
+      padding: 10px;
+      border-radius: 8px;
+      gap: 6px;
+      border-left: 4px solid #444;
+    }
+
+    .timeline-item.active {
+      background: #2f3a32;
+      border-left-color: var(--accent-color);
+    }
+
+    .timeline-item.pause-item {
+      background: #1e2620;
+      border-left-color: #48a265;
+    }
+
+    .item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .item-time {
+      font-family: monospace;
+      color: var(--accent-color);
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1.05rem;
+      padding: 2px 6px;
+      background: #181818;
+      border-radius: 4px;
+    }
+
+    .item-content {
+      font-size: 0.88rem;
+      line-height: 1.3;
+    }
+
+    .item-content .trans-text {
+      color: #88cc88;
+      font-size: 0.82rem;
+    }
+
+    .item-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+      gap: 5px;
+    }
+
+    .duration-input-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+
+    .duration-input-group input {
+      width: 50px;
+      padding: 6px 2px;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+
+    .sm-btn {
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      border-radius: 6px;
+      background: #3a3a3a;
+    }
+
+    .toggle-btn {
+      background: #2b5239;
+      color: #a3f7be;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- タブ切替 -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-play-btn" onclick="switchTab('play')">再生・調整</button>
+    <button class="tab-btn" id="tab-edit-btn" onclick="switchTab('edit')">テキスト・構成</button>
+  </div>
+
+  <!-- タブ1: 再生・調整画面 -->
+  <div id="tab-play" class="panel">
+    <div class="timer-display" id="timer">00:00.0</div>
+
+    <div class="btn-row">
+      <button id="start-btn" style="flex: 2; font-size: 1.1rem;" onclick="toggleTimer()">スタート</button>
+      <button class="secondary" style="flex: 1;" onclick="resetTimer()">リセット</button>
+    </div>
+
+    <!-- 歌詞スクロール画面 -->
+    <div class="teleprompter-container" style="margin-top: 12px;">
+      <div class="center-line"></div>
+      <div class="lyrics-wrapper" id="lyrics-wrapper"></div>
+    </div>
+
+    <!-- タイムライン一覧 -->
+    <div style="margin-top: 12px;">
+      <label>全構成・グループ一覧（タップで時間移動）：</label>
+      <div class="timeline-list" id="timeline-list"></div>
+    </div>
+  </div>
+
+  <!-- タブ2: テキスト編集画面 -->
+  <div id="tab-edit" class="panel" style="display: none;">
+    <div class="grid-2" style="margin-bottom: 10px;">
+      <div>
+        <label for="total-time">曲の総時間(秒):</label>
+        <input type="number" id="total-time" value="180" onchange="recalculateTimings()">
+      </div>
+      <div>
+        <label for="default-duration">1塊の標準秒数:</label>
+        <input type="number" id="default-duration" value="5" step="0.5" placeholder="自動" onchange="applyDefaultDuration()">
+      </div>
+    </div>
+
+    <div style="margin-bottom: 10px;">
+      <label>全体のグルーピング（一括変更）:</label>
+      <div class="btn-row" style="margin-top: 0;">
+        <button id="mode-single-btn" class="secondary mode-btn" style="flex: 1; font-size: 0.8rem; padding: 10px 4px;" onclick="setGlobalGrouping('single')">すべて1行ずつ</button>
+        <button id="mode-pair-btn" class="secondary mode-btn" style="flex: 1; font-size: 0.8rem; padding: 10px 4px;" onclick="setGlobalGrouping('pair')">すべて2行ペア</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 10px;">
+      <label for="lyrics-input">歌詞・対訳テキスト:</label>
+      <textarea id="lyrics-input">[イントロ:15]
+Hello, it's me
+（訳：こんにちは、私よ）
+I was wondering if after all these years you'd like to meet
+（訳：何年もの時が流れたけれど、会って話せないかと思って）
+[間奏:10]
+They say that time's supposed to heal ya
+（訳：時間は傷を癒やすと言うけれど）
+But I ain't done much healing
+（訳：私はまだあまり癒やされていない）</textarea>
+    </div>
+
+    <div class="btn-row">
+      <button onclick="parseAndCalculate(); switchTab('play');" style="flex: 1;">反映して再生へ</button>
+      <button class="secondary" onclick="saveSettings()" style="flex: 1;">設定を保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let blocks = [];
+  let elapsedTime = 0;
+  let timerInterval = null;
+  let isRunning = false;
+  let lastUpdateTime = 0;
+  let currentGroupMode = 'single';
+
+  const totalTimeInput = document.getElementById('total-time');
+  const defaultDurationInput = document.getElementById('default-duration');
+  const lyricsInput = document.getElementById('lyrics-input');
+  const timerDisplay = document.getElementById('timer');
+  const lyricsWrapper = document.getElementById('lyrics-wrapper');
+  const timelineList = document.getElementById('timeline-list');
+
+  function switchTab(tab) {
+    document.getElementById('tab-play').style.display = tab === 'play' ? 'block' : 'none';
+    document.getElementById('tab-edit').style.display = tab === 'edit' ? 'block' : 'none';
+    document.getElementById('tab-play-btn').classList.toggle('active', tab === 'play');
+    document.getElementById('tab-edit-btn').classList.toggle('active', tab === 'edit');
+  }
+
+  function updateModeButtons() {
+    const singleBtn = document.getElementById('mode-single-btn');
+    const pairBtn = document.getElementById('mode-pair-btn');
+    
+    if (currentGroupMode === 'single') {
+      singleBtn.classList.add('active-mode');
+      pairBtn.classList.remove('active-mode');
+    } else if (currentGroupMode === 'pair') {
+      singleBtn.classList.remove('active-mode');
+      pairBtn.classList.add('active-mode');
+    } else {
+      singleBtn.classList.remove('active-mode');
+      pairBtn.classList.remove('active-mode');
+    }
+  }
+
+  function parseAndCalculate(forceMode = null) {
+    if (forceMode) {
+      currentGroupMode = forceMode;
+    }
+    updateModeButtons();
+
+    const rawText = lyricsInput.value.trim();
+    if (!rawText) return;
+
+    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const tagPattern = /^\[(イントロ|間奏|アウトロ|間奏タイム):?\s*(\d+(\.\d+)?)\]$/;
+
+    blocks = [];
+
+    let i = 0;
+    while (i < lines.length) {
+      const match = lines[i].match(tagPattern);
+      if (match) {
+        const duration = parseFloat(match[2]);
+        blocks.push({
+          type: 'pause',
+          label: match[1],
+          duration: duration,
+          orig: `♪ [${match[1]} ${duration}秒] ♪`,
+          trans: '',
+          isPair: false
+        });
+        i++;
+      } else {
+        const currentLine = lines[i];
+        const nextLine = lines[i + 1];
+        
+        let makePair = false;
+        if (currentGroupMode === 'pair') {
+          makePair = !!nextLine && !nextLine.match(tagPattern);
+        } else if (currentGroupMode === 'single') {
+          makePair = false;
+        }
+
+        if (makePair) {
+          blocks.push({
+            type: 'lyric',
+            orig: currentLine,
+            trans: nextLine,
+            isPair: true,
+            duration: null
+          });
+          i += 2;
+        } else {
+          blocks.push({
+            type: 'lyric',
+            orig: currentLine,
+            trans: '',
+            isPair: false,
+            duration: null
+          });
+          i += 1;
+        }
+      }
+    }
+
+    recalculateTimings();
+    renderUI();
+  }
+
+  function setGlobalGrouping(mode) {
+    parseAndCalculate(mode);
+  }
+
+  function applyDefaultDuration() {
+    const defSec = parseFloat(defaultDurationInput.value);
+    if (isNaN(defSec) || defSec <= 0) return;
+
+    blocks.forEach(b => {
+      if (b.type === 'lyric') {
+        b.duration = defSec;
+      }
+    });
+    recalculateTimings();
+    renderUI();
+  }
+
+  function recalculateTimings() {
+    const totalSec = parseFloat(totalTimeInput.value) || 0;
+    const dedicatedTime = blocks.filter(b => b.type === 'pause').reduce((acc, b) => acc + b.duration, 0);
+    const lyricBlocks = blocks.filter(b => b.type === 'lyric');
+    
+    const remainingTime = Math.max(0, totalSec - dedicatedTime);
+    const calcDefaultTime = lyricBlocks.length > 0 ? remainingTime / lyricBlocks.length : 5;
+
+    let currentTime = 0;
+    blocks.forEach(block => {
+      block.startTime = parseFloat(currentTime.toFixed(1));
+      const dur = (block.duration !== null && block.duration !== undefined) ? block.duration : calcDefaultTime;
+      block.duration = parseFloat(dur.toFixed(1));
+      currentTime += block.duration;
+    });
+  }
+
+  function toggleBlockMode(index) {
+    const target = blocks[index];
+    if (target.type === 'pause') return;
+
+    if (target.isPair) {
+      const origText = target.orig;
+      const transText = target.trans;
+      
+      blocks.splice(index, 1, 
+        { type: 'lyric', orig: origText, trans: '', isPair: false, duration: null },
+        { type: 'lyric', orig: transText, trans: '', isPair: false, duration: null }
+      );
+    } else {
+      if (index < blocks.length - 1 && blocks[index + 1].type === 'lyric') {
+        const nextBlock = blocks[index + 1];
+        target.trans = nextBlock.orig + (nextBlock.trans ? ' ' + nextBlock.trans : '');
+        target.isPair = true;
+        target.duration = null;
+        blocks.splice(index + 1, 1);
+      }
+    }
+
+    currentGroupMode = 'custom';
+    updateModeButtons();
+    recalculateTimings();
+    renderUI();
+  }
+
+  function onBlockDurationChange(index, value) {
+    const dur = parseFloat(value);
+    if (!isNaN(dur) && dur > 0) {
+      blocks[index].duration = dur;
+      recalculateTimings();
+      renderUI();
+    }
+  }
+
+  function renderUI() {
+    lyricsWrapper.innerHTML = '';
+    blocks.forEach((b, index) => {
+      const div = document.createElement('div');
+      div.className = 'lyric-block';
+      div.id = `block-${index}`;
+
+      if (b.type === 'pause') {
+        div.innerHTML = `<div class="orig" style="color: #88cc88;">${b.orig}</div>`;
+      } else {
+        let html = `<div class="orig">${b.orig}</div>`;
+        if (b.trans) {
+          html += `<div class="trans">${b.trans}</div>`;
+        }
+        div.innerHTML = html;
+      }
+      lyricsWrapper.appendChild(div);
+    });
+
+    renderTimelineList();
+    updateScroll(elapsedTime);
+  }
+
+  function renderTimelineList() {
+    timelineList.innerHTML = '';
+    blocks.forEach((b, index) => {
+      const div = document.createElement('div');
+      div.className = `timeline-item ${b.type === 'pause' ? 'pause-item' : ''}`;
+      div.id = `item-${index}`;
+
+      let contentHtml = `<div class="orig">${b.orig}</div>`;
+      if (b.trans) {
+        contentHtml += `<div class="trans-text">${b.trans}</div>`;
+      }
+
+      div.innerHTML = `
+        <div class="item-header">
+          <span class="item-time" onclick="jumpToTime(${b.startTime})">${formatTime(b.startTime)}</span>
+          ${b.type === 'lyric' ? `<button class="sm-btn toggle-btn" onclick="toggleBlockMode(${index})">${b.isPair ? 'ペア解体' : 'ペア化'}</button>` : ''}
+        </div>
+        <div class="item-content">${contentHtml}</div>
+        <div class="item-controls">
+          <div class="duration-input-group">
+            <span>表示:</span>
+            <input type="number" step="0.5" value="${b.duration}" onchange="onBlockDurationChange(${index}, this.value)">
+            <span>秒</span>
+          </div>
+          <div>
+            <button class="sm-btn" onclick="adjustTime(${index}, -0.5)">-0.5</button>
+            <button class="sm-btn" onclick="setNowTime(${index})">今！</button>
+            <button class="sm-btn" onclick="adjustTime(${index}, 0.5)">+0.5</button>
+          </div>
+        </div>
+      `;
+      timelineList.appendChild(div);
+    });
+  }
+
+  function setNowTime(index) {
+    blocks[index].startTime = Math.max(0, parseFloat(elapsedTime.toFixed(1)));
+    if (index > 0) {
+      blocks[index - 1].duration = parseFloat((blocks[index].startTime - blocks[index - 1].startTime).toFixed(1));
+    }
+    sortAndRefresh();
+  }
+
+  function adjustTime(index, amount) {
+    blocks[index].startTime = Math.max(0, parseFloat((blocks[index].startTime + amount).toFixed(1)));
+    if (index > 0) {
+      blocks[index - 1].duration = parseFloat((blocks[index].startTime - blocks[index - 1].startTime).toFixed(1));
+    }
+    sortAndRefresh();
+  }
+
+  function sortAndRefresh() {
+    blocks.sort((a, b) => a.startTime - b.startTime);
+    renderUI();
+  }
+
+  function jumpToTime(time) {
+    elapsedTime = time;
+    if (isRunning) {
+      lastUpdateTime = Date.now() - (elapsedTime * 1000);
+    }
+    updateScroll(elapsedTime);
+  }
+
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = Math.floor(sec % 60).toString().padStart(2, '0');
+    const ms = Math.floor((sec % 1) * 10);
+    return `${m}:${s}.${ms}`;
+  }
+
+  function updateScroll(currentTime) {
+    timerDisplay.textContent = formatTime(currentTime);
+    if (blocks.length === 0) return;
+
+    let activeIndex = -1;
+    for (let i = 0; i < blocks.length; i++) {
+      if (currentTime >= blocks[i].startTime) {
+        activeIndex = i;
+      } else {
+        break;
+      }
+    }
+
+    document.querySelectorAll('.lyric-block').forEach((el, idx) => {
+      el.classList.toggle('active', idx === activeIndex);
+    });
+
+    document.querySelectorAll('.timeline-item').forEach((el, idx) => {
+      el.classList.toggle('active', idx === activeIndex);
+    });
+
+    if (activeIndex !== -1) {
+      const activeEl = document.getElementById(`block-${activeIndex}`);
+      if (activeEl) {
+        const offsetTop = activeEl.offsetTop + (activeEl.offsetHeight / 2);
+        lyricsWrapper.style.transform = `translateY(-${offsetTop}px)`;
+      }
+    }
+  }
+
+  function toggleTimer() {
+    const startBtn = document.getElementById('start-btn');
+    if (isRunning) {
+      clearInterval(timerInterval);
+      isRunning = false;
+      startBtn.textContent = 'スタート';
+    } else {
+      isRunning = true;
+      startBtn.textContent = '一時停止';
+      lastUpdateTime = Date.now() - (elapsedTime * 1000);
+
+      timerInterval = setInterval(() => {
+        elapsedTime = (Date.now() - lastUpdateTime) / 1000;
+        updateScroll(elapsedTime);
+      }, 50);
+    }
+  }
+
+  function resetTimer() {
+    clearInterval(timerInterval);
+    isRunning = false;
+    elapsedTime = 0;
+    document.getElementById('start-btn').textContent = 'スタート';
+    updateScroll(0);
+  }
+
+  function saveSettings() {
+    localStorage.setItem('lyrics_app_totalTime', totalTimeInput.value);
+    localStorage.setItem('lyrics_app_defaultDuration', defaultDurationInput.value);
+    localStorage.setItem('lyrics_app_text', lyricsInput.value);
+    localStorage.setItem('lyrics_app_mode', currentGroupMode);
+    alert('スマホに設定を保存しました！');
+  }
+
+  function loadSettings() {
+    const savedTime = localStorage.getItem('lyrics_app_totalTime');
+    const savedDefDur = localStorage.getItem('lyrics_app_defaultDuration');
+    const savedText = localStorage.getItem('lyrics_app_text');
+    const savedMode = localStorage.getItem('lyrics_app_mode');
+    
+    if (savedTime) totalTimeInput.value = savedTime;
+    if (savedDefDur) defaultDurationInput.value = savedDefDur;
+    if (savedText) lyricsInput.value = savedText;
+    if (savedMode) currentGroupMode = savedMode;
+  }
+
+  loadSettings();
+  parseAndCalculate();
+</script>
+
+</body>
+</html>
