@@ -3,20 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>洋楽歌詞・対訳プロンプター (スマホ版)</title>
+  <title>洋楽歌詞・対訳プロンプター v5</title>
   <style>
     :root {
       --bg-color: #121212;
       --card-bg: #1e1e1e;
       --text-color: #ffffff;
       --accent-color: #1db954;
-      --dim-text: #888888;
+      --dim-text: #777777;
       --border-color: #333333;
+      
+      /* 文字サイズの基本スケール（デフォルト 1.0） */
+      --font-scale: 1.0;
     }
 
     * {
       box-sizing: border-box;
-      touch-action: manipulation; /* タップの反応速度向上 */
+      touch-action: manipulation;
     }
 
     body {
@@ -32,10 +35,10 @@
 
     .container {
       width: 100%;
-      max-width: 500px; /* スマホ用に最大幅を調整 */
+      max-width: 500px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
     .tab-bar {
@@ -55,7 +58,7 @@
       font-weight: bold;
       cursor: pointer;
       border-radius: 8px;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
     }
 
     .tab-btn.active {
@@ -78,7 +81,7 @@
       color: #ccc;
     }
 
-    input, textarea, button {
+    input, select, textarea, button {
       border-radius: 8px;
       border: 1px solid var(--border-color);
       background-color: #2a2a2a;
@@ -86,13 +89,13 @@
       font-size: 0.95rem;
     }
 
-    input, textarea {
+    input, select, textarea {
       width: 100%;
       padding: 10px;
     }
 
     textarea {
-      height: 140px;
+      height: 150px;
       resize: vertical;
       font-family: monospace;
     }
@@ -115,8 +118,9 @@
 
     button:active { opacity: 0.7; }
     button.secondary { background-color: #333; color: #ccc; }
+    button.danger { background-color: #8b0000; color: #fff; }
 
-    .mode-btn.active-mode {
+    .mode-btn.active-mode, .font-btn.active-font {
       background-color: var(--accent-color) !important;
       color: #fff !important;
       border: 1px solid #72d893;
@@ -124,21 +128,47 @@
 
     .timer-display {
       text-align: center;
-      font-size: 2.5rem;
+      font-size: 2.8rem;
       font-family: monospace;
-      margin: 2px 0;
+      margin: 0;
       color: var(--accent-color);
       font-weight: bold;
     }
 
+    /* 文字サイズ変更バー */
+    .font-size-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      background: #181818;
+      padding: 6px 10px;
+      border-radius: 8px;
+    }
+
+    .font-size-bar label {
+      margin-bottom: 0;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+
+    .font-btn {
+      flex: 1;
+      padding: 6px 4px;
+      font-size: 0.8rem;
+      background: #2a2a2a;
+      border: 1px solid #444;
+    }
+
     /* 歌詞スクリーン */
     .teleprompter-container {
-      height: 240px; /* スマホでより見やすく確保 */
+      height: 320px;
       overflow: hidden;
       position: relative;
       background: #000;
       border-radius: 12px;
       border: 1px solid var(--border-color);
+      margin-top: 8px;
     }
 
     .center-line {
@@ -162,10 +192,10 @@
     }
 
     .lyric-block {
-      padding: 14px 10px;
+      padding: 16px 12px;
       color: var(--dim-text);
-      transition: color 0.2s, font-size 0.2s, opacity 0.2s;
-      opacity: 0.35;
+      transition: color 0.2s, opacity 0.2s;
+      opacity: 0.3;
     }
 
     .lyric-block.active {
@@ -173,29 +203,43 @@
       opacity: 1;
     }
 
+    /* ★文字サイズを動的に変更★ */
     .lyric-block .orig {
-      font-size: 1.1rem;
+      font-size: calc(1.3rem * var(--font-scale));
       font-weight: bold;
-      line-height: 1.3;
+      line-height: 1.35;
     }
 
     .lyric-block .trans {
-      font-size: 0.95rem;
+      font-size: calc(1.05rem * var(--font-scale));
       color: #72d893;
-      margin-top: 4px;
-      line-height: 1.3;
+      margin-top: 6px;
+      line-height: 1.35;
     }
 
     .lyric-block.active .trans {
       color: #a3f7be;
     }
 
-    /* タイムライン一覧 */
+    /* 折りたたみ用リスト */
+    .timeline-container {
+      margin-top: 10px;
+    }
+
+    .timeline-toggle-btn {
+      width: 100%;
+      padding: 8px;
+      font-size: 0.85rem;
+      background: #282828;
+      border: 1px solid #444;
+      border-radius: 6px;
+    }
+
     .timeline-list {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-height: 280px;
+      max-height: 250px;
       overflow-y: auto;
       margin-top: 8px;
       padding-right: 2px;
@@ -216,11 +260,6 @@
       border-left-color: var(--accent-color);
     }
 
-    .timeline-item.pause-item {
-      background: #1e2620;
-      border-left-color: #48a265;
-    }
-
     .item-header {
       display: flex;
       align-items: center;
@@ -239,13 +278,13 @@
     }
 
     .item-content {
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       line-height: 1.3;
     }
 
     .item-content .trans-text {
       color: #88cc88;
-      font-size: 0.82rem;
+      font-size: 0.85rem;
     }
 
     .item-controls {
@@ -265,14 +304,14 @@
     }
 
     .duration-input-group input {
-      width: 50px;
+      width: 60px;
       padding: 6px 2px;
       text-align: center;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
     }
 
     .sm-btn {
-      padding: 6px 10px;
+      padding: 6px 8px;
       font-size: 0.75rem;
       border-radius: 6px;
       background: #3a3a3a;
@@ -295,50 +334,78 @@
 <div class="container">
   <!-- タブ切替 -->
   <div class="tab-bar">
-    <button class="tab-btn active" id="tab-play-btn" onclick="switchTab('play')">再生・調整</button>
-    <button class="tab-btn" id="tab-edit-btn" onclick="switchTab('edit')">テキスト・構成</button>
+    <button class="tab-btn active" id="tab-play-btn" onclick="switchTab('play')">再生・プロンプター</button>
+    <button class="tab-btn" id="tab-edit-btn" onclick="switchTab('edit')">曲データ・構成編集</button>
   </div>
 
-  <!-- タブ1: 再生・調整画面 -->
+  <!-- タブ1: 再生・プロンプター画面 -->
   <div id="tab-play" class="panel">
     <div class="timer-display" id="timer">00:00.0</div>
 
     <div class="btn-row">
-      <button id="start-btn" style="flex: 2; font-size: 1.1rem;" onclick="toggleTimer()">スタート</button>
+      <button id="start-btn" style="flex: 2; font-size: 1.2rem;" onclick="toggleTimer()">スタート</button>
       <button class="secondary" style="flex: 1;" onclick="resetTimer()">リセット</button>
     </div>
 
+    <!-- ★文字サイズ選択バー★ -->
+    <div class="font-size-bar">
+      <label>文字サイズ:</label>
+      <button class="font-btn" id="f-sm" onclick="setFontScale(0.8)">小</button>
+      <button class="font-btn active-font" id="f-md" onclick="setFontScale(1.0)">中</button>
+      <button class="font-btn" id="f-lg" onclick="setFontScale(1.2)">大</button>
+      <button class="font-btn" id="f-xl" onclick="setFontScale(1.5)">特大</button>
+    </div>
+
     <!-- 歌詞スクロール画面 -->
-    <div class="teleprompter-container" style="margin-top: 12px;">
+    <div class="teleprompter-container">
       <div class="center-line"></div>
       <div class="lyrics-wrapper" id="lyrics-wrapper"></div>
     </div>
 
-    <!-- タイムライン一覧 -->
-    <div style="margin-top: 12px;">
-      <label>全構成・グループ一覧（タップで時間移動）：</label>
-      <div class="timeline-list" id="timeline-list"></div>
+    <!-- 折りたたみ可能な一覧表示 -->
+    <div class="timeline-container">
+      <button class="timeline-toggle-btn secondary" id="toggle-list-btn" onclick="toggleTimelineList()">▼ 全構成・タイムライン一覧を表示</button>
+      <div class="timeline-list" id="timeline-list" style="display: none;"></div>
     </div>
   </div>
 
-  <!-- タブ2: テキスト編集画面 -->
+  <!-- タブ2: 曲データ・構成編集画面 -->
   <div id="tab-edit" class="panel" style="display: none;">
+    
+    <!-- 複数曲保存・読み込みエリア -->
+    <div style="background: #181818; padding: 10px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #333;">
+      <label for="song-select" style="color: var(--accent-color);">🎵 保存済みの曲を選ぶ:</label>
+      <select id="song-select" onchange="loadSelectedSong()">
+        <option value="">-- 新しい曲を作成 --</option>
+      </select>
+
+      <div style="margin-top: 8px;">
+        <label for="song-title">曲名（保存用タイトル）:</label>
+        <input type="text" id="song-title" placeholder="例: Adele - Hello">
+      </div>
+
+      <div class="btn-row" style="margin-top: 8px;">
+        <button onclick="saveCurrentSong()" style="flex: 2;">この曲を保存する</button>
+        <button class="danger" onclick="deleteCurrentSong()" style="flex: 1;">削除</button>
+      </div>
+    </div>
+
     <div class="grid-2" style="margin-bottom: 10px;">
       <div>
         <label for="total-time">曲の総時間(秒):</label>
         <input type="number" id="total-time" value="180" onchange="recalculateTimings()">
       </div>
       <div>
-        <label for="default-duration">1塊の標準秒数:</label>
-        <input type="number" id="default-duration" value="5" step="0.5" placeholder="自動" onchange="applyDefaultDuration()">
+        <label for="default-duration">標準表示(秒):</label>
+        <input type="number" id="default-duration" value="5" step="0.5" onchange="applyDefaultDuration()">
       </div>
     </div>
 
     <div style="margin-bottom: 10px;">
-      <label>全体のグルーピング（一括変更）:</label>
+      <label>全体のグルーピング:</label>
       <div class="btn-row" style="margin-top: 0;">
-        <button id="mode-single-btn" class="secondary mode-btn" style="flex: 1; font-size: 0.8rem; padding: 10px 4px;" onclick="setGlobalGrouping('single')">すべて1行ずつ</button>
-        <button id="mode-pair-btn" class="secondary mode-btn" style="flex: 1; font-size: 0.8rem; padding: 10px 4px;" onclick="setGlobalGrouping('pair')">すべて2行ペア</button>
+        <button id="mode-single-btn" class="secondary mode-btn" style="flex: 1; font-size: 0.8rem;" onclick="setGlobalGrouping('single')">すべて1行ずつ</button>
+        <button id="mode-pair-btn" class="secondary mode-btn" style="flex: 1; font-size: 0.8rem;" onclick="setGlobalGrouping('pair')">すべて2行ペア</button>
       </div>
     </div>
 
@@ -358,7 +425,6 @@ But I ain't done much healing
 
     <div class="btn-row">
       <button onclick="parseAndCalculate(); switchTab('play');" style="flex: 1;">反映して再生へ</button>
-      <button class="secondary" onclick="saveSettings()" style="flex: 1;">設定を保存</button>
     </div>
   </div>
 </div>
@@ -370,6 +436,8 @@ But I ain't done much healing
   let isRunning = false;
   let lastUpdateTime = 0;
   let currentGroupMode = 'single';
+  let isListVisible = false;
+  let currentFontScale = 1.0;
 
   const totalTimeInput = document.getElementById('total-time');
   const defaultDurationInput = document.getElementById('default-duration');
@@ -377,6 +445,8 @@ But I ain't done much healing
   const timerDisplay = document.getElementById('timer');
   const lyricsWrapper = document.getElementById('lyrics-wrapper');
   const timelineList = document.getElementById('timeline-list');
+  const songTitleInput = document.getElementById('song-title');
+  const songSelect = document.getElementById('song-select');
 
   function switchTab(tab) {
     document.getElementById('tab-play').style.display = tab === 'play' ? 'block' : 'none';
@@ -385,26 +455,36 @@ But I ain't done much healing
     document.getElementById('tab-edit-btn').classList.toggle('active', tab === 'edit');
   }
 
+  /* ★文字サイズ変更機能★ */
+  function setFontScale(scale) {
+    currentFontScale = scale;
+    document.documentElement.style.setProperty('--font-scale', scale);
+    
+    // ボタンのハイライト切替
+    document.getElementById('f-sm').classList.toggle('active-font', scale === 0.8);
+    document.getElementById('f-md').classList.toggle('active-font', scale === 1.0);
+    document.getElementById('f-lg').classList.toggle('active-font', scale === 1.2);
+    document.getElementById('f-xl').classList.toggle('active-font', scale === 1.5);
+
+    localStorage.setItem('lyrics_app_font_scale', scale);
+    updateScroll(elapsedTime);
+  }
+
+  function toggleTimelineList() {
+    isListVisible = !isListVisible;
+    timelineList.style.display = isListVisible ? 'flex' : 'none';
+    document.getElementById('toggle-list-btn').textContent = isListVisible ? '▲ 一覧をたたむ' : '▼ 全構成・タイムライン一覧を表示';
+  }
+
   function updateModeButtons() {
     const singleBtn = document.getElementById('mode-single-btn');
     const pairBtn = document.getElementById('mode-pair-btn');
-    
-    if (currentGroupMode === 'single') {
-      singleBtn.classList.add('active-mode');
-      pairBtn.classList.remove('active-mode');
-    } else if (currentGroupMode === 'pair') {
-      singleBtn.classList.remove('active-mode');
-      pairBtn.classList.add('active-mode');
-    } else {
-      singleBtn.classList.remove('active-mode');
-      pairBtn.classList.remove('active-mode');
-    }
+    singleBtn.classList.toggle('active-mode', currentGroupMode === 'single');
+    pairBtn.classList.toggle('active-mode', currentGroupMode === 'pair');
   }
 
   function parseAndCalculate(forceMode = null) {
-    if (forceMode) {
-      currentGroupMode = forceMode;
-    }
+    if (forceMode) currentGroupMode = forceMode;
     updateModeButtons();
 
     const rawText = lyricsInput.value.trim();
@@ -413,9 +493,14 @@ But I ain't done much healing
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const tagPattern = /^\[(イントロ|間奏|アウトロ|間奏タイム):?\s*(\d+(\.\d+)?)\]$/;
 
-    blocks = [];
+    const existingDurations = new Map();
+    blocks.forEach(b => {
+      if (b.orig && b.duration) existingDurations.set(b.orig, b.duration);
+    });
 
+    blocks = [];
     let i = 0;
+
     while (i < lines.length) {
       const match = lines[i].match(tagPattern);
       if (match) {
@@ -432,13 +517,9 @@ But I ain't done much healing
       } else {
         const currentLine = lines[i];
         const nextLine = lines[i + 1];
-        
-        let makePair = false;
-        if (currentGroupMode === 'pair') {
-          makePair = !!nextLine && !nextLine.match(tagPattern);
-        } else if (currentGroupMode === 'single') {
-          makePair = false;
-        }
+        let makePair = (currentGroupMode === 'pair') && !!nextLine && !nextLine.match(tagPattern);
+
+        const savedDur = existingDurations.get(currentLine) || null;
 
         if (makePair) {
           blocks.push({
@@ -446,7 +527,7 @@ But I ain't done much healing
             orig: currentLine,
             trans: nextLine,
             isPair: true,
-            duration: null
+            duration: savedDur
           });
           i += 2;
         } else {
@@ -455,7 +536,7 @@ But I ain't done much healing
             orig: currentLine,
             trans: '',
             isPair: false,
-            duration: null
+            duration: savedDur
           });
           i += 1;
         }
@@ -467,6 +548,7 @@ But I ain't done much healing
   }
 
   function setGlobalGrouping(mode) {
+    blocks.forEach(b => { if (b.type === 'lyric') b.duration = null; });
     parseAndCalculate(mode);
   }
 
@@ -475,9 +557,7 @@ But I ain't done much healing
     if (isNaN(defSec) || defSec <= 0) return;
 
     blocks.forEach(b => {
-      if (b.type === 'lyric') {
-        b.duration = defSec;
-      }
+      if (b.type === 'lyric') b.duration = defSec;
     });
     recalculateTimings();
     renderUI();
@@ -485,17 +565,22 @@ But I ain't done much healing
 
   function recalculateTimings() {
     const totalSec = parseFloat(totalTimeInput.value) || 0;
-    const dedicatedTime = blocks.filter(b => b.type === 'pause').reduce((acc, b) => acc + b.duration, 0);
-    const lyricBlocks = blocks.filter(b => b.type === 'lyric');
     
-    const remainingTime = Math.max(0, totalSec - dedicatedTime);
-    const calcDefaultTime = lyricBlocks.length > 0 ? remainingTime / lyricBlocks.length : 5;
+    const setBlocks = blocks.filter(b => b.duration !== null && b.duration !== undefined);
+    const unsetBlocks = blocks.filter(b => b.duration === null || b.duration === undefined);
+    
+    const usedTime = setBlocks.reduce((acc, b) => acc + b.duration, 0);
+    const remainingTime = Math.max(0, totalSec - usedTime);
+    const autoDuration = unsetBlocks.length > 0 ? remainingTime / unsetBlocks.length : 5;
 
     let currentTime = 0;
     blocks.forEach(block => {
       block.startTime = parseFloat(currentTime.toFixed(1));
-      const dur = (block.duration !== null && block.duration !== undefined) ? block.duration : calcDefaultTime;
-      block.duration = parseFloat(dur.toFixed(1));
+      if (block.duration === null || block.duration === undefined) {
+        block.duration = parseFloat(autoDuration.toFixed(1));
+      } else {
+        block.duration = parseFloat(block.duration.toFixed(1));
+      }
       currentTime += block.duration;
     });
   }
@@ -507,7 +592,6 @@ But I ain't done much healing
     if (target.isPair) {
       const origText = target.orig;
       const transText = target.trans;
-      
       blocks.splice(index, 1, 
         { type: 'lyric', orig: origText, trans: '', isPair: false, duration: null },
         { type: 'lyric', orig: transText, trans: '', isPair: false, duration: null }
@@ -530,7 +614,7 @@ But I ain't done much healing
 
   function onBlockDurationChange(index, value) {
     const dur = parseFloat(value);
-    if (!isNaN(dur) && dur > 0) {
+    if (!isNaN(dur) && dur >= 0) {
       blocks[index].duration = dur;
       recalculateTimings();
       renderUI();
@@ -628,88 +712,4 @@ But I ain't done much healing
     const m = Math.floor(sec / 60).toString().padStart(2, '0');
     const s = Math.floor(sec % 60).toString().padStart(2, '0');
     const ms = Math.floor((sec % 1) * 10);
-    return `${m}:${s}.${ms}`;
-  }
-
-  function updateScroll(currentTime) {
-    timerDisplay.textContent = formatTime(currentTime);
-    if (blocks.length === 0) return;
-
-    let activeIndex = -1;
-    for (let i = 0; i < blocks.length; i++) {
-      if (currentTime >= blocks[i].startTime) {
-        activeIndex = i;
-      } else {
-        break;
-      }
-    }
-
-    document.querySelectorAll('.lyric-block').forEach((el, idx) => {
-      el.classList.toggle('active', idx === activeIndex);
-    });
-
-    document.querySelectorAll('.timeline-item').forEach((el, idx) => {
-      el.classList.toggle('active', idx === activeIndex);
-    });
-
-    if (activeIndex !== -1) {
-      const activeEl = document.getElementById(`block-${activeIndex}`);
-      if (activeEl) {
-        const offsetTop = activeEl.offsetTop + (activeEl.offsetHeight / 2);
-        lyricsWrapper.style.transform = `translateY(-${offsetTop}px)`;
-      }
-    }
-  }
-
-  function toggleTimer() {
-    const startBtn = document.getElementById('start-btn');
-    if (isRunning) {
-      clearInterval(timerInterval);
-      isRunning = false;
-      startBtn.textContent = 'スタート';
-    } else {
-      isRunning = true;
-      startBtn.textContent = '一時停止';
-      lastUpdateTime = Date.now() - (elapsedTime * 1000);
-
-      timerInterval = setInterval(() => {
-        elapsedTime = (Date.now() - lastUpdateTime) / 1000;
-        updateScroll(elapsedTime);
-      }, 50);
-    }
-  }
-
-  function resetTimer() {
-    clearInterval(timerInterval);
-    isRunning = false;
-    elapsedTime = 0;
-    document.getElementById('start-btn').textContent = 'スタート';
-    updateScroll(0);
-  }
-
-  function saveSettings() {
-    localStorage.setItem('lyrics_app_totalTime', totalTimeInput.value);
-    localStorage.setItem('lyrics_app_defaultDuration', defaultDurationInput.value);
-    localStorage.setItem('lyrics_app_text', lyricsInput.value);
-    localStorage.setItem('lyrics_app_mode', currentGroupMode);
-    alert('スマホに設定を保存しました！');
-  }
-
-  function loadSettings() {
-    const savedTime = localStorage.getItem('lyrics_app_totalTime');
-    const savedDefDur = localStorage.getItem('lyrics_app_defaultDuration');
-    const savedText = localStorage.getItem('lyrics_app_text');
-    const savedMode = localStorage.getItem('lyrics_app_mode');
-    
-    if (savedTime) totalTimeInput.value = savedTime;
-    if (savedDefDur) defaultDurationInput.value = savedDefDur;
-    if (savedText) lyricsInput.value = savedText;
-    if (savedMode) currentGroupMode = savedMode;
-  }
-
-  loadSettings();
-  parseAndCalculate();
-</script>
-
-</body>
-</html>
+    return `${
