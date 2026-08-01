@@ -696,20 +696,4 @@ But I ain't done much healing
   }
 
   function sortAndRefresh() {
-    blocks.sort((a, b) => a.startTime - b.startTime);
-    renderUI();
-  }
-
-  function jumpToTime(time) {
-    elapsedTime = time;
-    if (isRunning) {
-      lastUpdateTime = Date.now() - (elapsedTime * 1000);
-    }
-    updateScroll(elapsedTime);
-  }
-
-  function formatTime(sec) {
-    const m = Math.floor(sec / 60).toString().padStart(2, '0');
-    const s = Math.floor(sec % 60).toString().padStart(2, '0');
-    const ms = Math.floor((sec % 1) * 10);
-    return `${
+    blocks.sort((a, b) => a
